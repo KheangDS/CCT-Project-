@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import json
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -27,31 +29,15 @@ from src.tax_logic import (
 )
 
 
+BASE_DIR = Path(__file__).resolve().parent
+LOGO_PATH = BASE_DIR / "public" / "image.png"
+
 st.set_page_config(
     page_title="Cambodian Tax Calculator",
-    page_icon="៛",
+    page_icon=str(LOGO_PATH),
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-
-MODULES = [
-    "Salary Tax",
-    "Business Payroll",
-    "Withholding Tax",
-    "Land Tax",
-    "Stamp Duty",
-    "VAT",
-    "Patent Tax",
-    "Prepayment Income Tax",
-    "Accommodation Tax",
-    "Specific Tax",
-    "Public Lighting Tax",
-    "Vehicle Road Tax",
-    "Vehicle Import Tax",
-    "History",
-]
-
 
 def money_input(label: str, value: float = 0.0, min_value: float = 0.0) -> float:
     return st.number_input(label, min_value=min_value, value=float(value), step=10000.0, format="%.2f")
@@ -317,6 +303,15 @@ def simple_taxes_page(module: str) -> None:
         show_result(module, f"{module} Calculation", input_data, result)
 
 
+def patent_tax_page() -> None:
+    simple_taxes_page("Patent Tax")
+
+def prepayment_income_tax_page() -> None:
+    simple_taxes_page("Prepayment Income Tax")
+
+def accommodation_tax_page() -> None:
+    simple_taxes_page("Accommodation Tax")
+
 def specific_tax_page() -> None:
     st.header("Specific Tax")
     rates = load_config()["specific_tax"]["rates"]
@@ -419,34 +414,132 @@ def history_page() -> None:
 
 
 def main() -> None:
-    st.title("Cambodian Tax Calculator")
-    st.caption("Practical calculators for common Cambodian tax workflows. Review rates in config/tax_rates.json.")
+    
+    st.markdown("""
+        <style>
+            :root {
+                --tax-green: #0f5132;
+                --tax-muted: #5d6b63;
+                --tax-border: #d9e2dc;
+            }
 
-    module = st.sidebar.radio("Calculator", MODULES)
-    if module == "Salary Tax":
-        salary_tax_page()
-    elif module == "Business Payroll":
-        payroll_page()
-    elif module == "Withholding Tax":
-        withholding_page()
-    elif module == "Land Tax":
-        land_tax_page()
-    elif module == "Stamp Duty":
-        stamp_duty_page()
-    elif module == "VAT":
-        vat_page()
-    elif module in {"Patent Tax", "Prepayment Income Tax", "Accommodation Tax"}:
-        simple_taxes_page(module)
-    elif module == "Specific Tax":
-        specific_tax_page()
-    elif module == "Public Lighting Tax":
-        public_lighting_page()
-    elif module == "Vehicle Road Tax":
-        vehicle_road_page()
-    elif module == "Vehicle Import Tax":
-        vehicle_import_page()
-    else:
-        history_page()
+            /* Modernizing the look */
+            div.block-container {
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+                max-width: 1200px;
+            }
+            .app-header {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 1.3rem 1rem;
+                border: 1px solid var(--tax-border);
+                border-radius: 8px;
+                background: #ffffff;
+                box-shadow: 0 8px 24px rgba(15, 81, 50, 0.08);
+                margin-bottom: 0.9rem;
+            }
+            .app-header img {
+                width: 90px;
+                height: 90px;
+                object-fit: contain;
+                flex: 0 0 auto;
+            }
+            .app-title {
+                color: var(--tax-green);
+                font-size: 1.55rem;
+                font-weight: 800;
+                line-height: 1.25;
+                letter-spacing: 0;
+            }
+            .app-subtitle {
+                color: var(--tax-muted);
+                font-size: 0.95rem;
+                margin-top: 0.2rem;
+                letter-spacing: 0;
+            }
+            .stButton>button {
+                border-radius: 8px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+            .stButton>button:hover {
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+            div[data-testid="stMetricValue"] {
+                font-size: 2rem;
+                font-weight: 700;
+                color: #1f5f3e;
+            }
+            /* Styling expanders similarly to cards */
+            div[data-testid="stExpander"] {
+                border-radius: 8px;
+                border: 1px solid #e0e0e0;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+            @media (max-width: 720px) {
+                .app-header {
+                    align-items: flex-start;
+                    gap: 0.75rem;
+                }
+                .app-header img {
+                    width: 54px;
+                    height: 54px;
+                }
+                .app-title {
+                    font-size: 1.18rem;
+                }
+                .app-subtitle {
+                    font-size: 0.86rem;
+                }
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    pages = {
+        "Personal & Payroll": [
+            st.Page(salary_tax_page, title="Salary Tax"),
+            st.Page(payroll_page, title="Business Payroll"),
+        ],
+        "Business Taxes": [
+            st.Page(withholding_page, title="Withholding Tax"),
+            st.Page(vat_page, title="VAT"),
+            st.Page(patent_tax_page, title="Patent Tax"),
+            st.Page(prepayment_income_tax_page, title="Prepayment Income Tax"),
+            st.Page(specific_tax_page, title="Specific Tax"),
+        ],
+        "Property & Others": [
+            st.Page(land_tax_page, title="Land Tax"),
+            st.Page(stamp_duty_page, title="Stamp Duty"),
+            st.Page(accommodation_tax_page, title="Accommodation Tax"),
+            st.Page(public_lighting_page, title="Public Lighting Tax"),
+            st.Page(vehicle_road_page, title="Vehicle Road Tax"),
+            st.Page(vehicle_import_page, title="Vehicle Import Tax"),
+        ],
+        "System": [
+            st.Page(history_page, title="History"),
+        ]
+    }
+
+    with LOGO_PATH.open("rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode()
+    
+    st.markdown(
+        f"""
+        <div class="app-header">
+            <img src="data:image/png;base64,{img_b64}" alt="General Department of Taxation logo" />
+            <div>
+                <div class="app-title">Cambodia Tax Calculator</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    pg = st.navigation(pages)
+    pg.run()
 
 
 if __name__ == "__main__":

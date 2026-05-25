@@ -3,91 +3,20 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config" / "tax_rates.json"
 
-DEFAULT_CONFIG: dict[str, Any] = {
-    "salary_tax": {
-        "resident_brackets_khr": [
-            {"min": 0, "max": 1500000, "rate": 0.0, "quick_deduction": 0},
-            {"min": 1500001, "max": 2000000, "rate": 0.05, "quick_deduction": 75000},
-            {"min": 2000001, "max": 8500000, "rate": 0.10, "quick_deduction": 175000},
-            {"min": 8500001, "max": 12500000, "rate": 0.15, "quick_deduction": 600000},
-            {"min": 12500001, "max": None, "rate": 0.20, "quick_deduction": 1225000},
-        ],
-        "dependent_deduction_khr": {"spouse": 150000, "child": 150000},
-        "non_resident_rate": 0.20,
-        "fringe_benefit_rate": 0.20
-    },
-    "withholding_tax": {
-        "resident_rates": {
-            "Rental": 0.10,
-            "Service": 0.15,
-            "Royalty": 0.15,
-            "Interest": 0.15,
-            "Fixed-term deposit interest": 0.06,
-            "Non-fixed-term savings interest": 0.04
-        },
-        "non_resident_rate": 0.14
-    },
-    "land_tax": {"rate": 0.02, "exemption_area_m2": 50000},
-    "stamp_duty": {"rate": 0.04, "family_deductions_khr": {"second_plus_gift": 100000000, "inlaws_siblings_inheritance": 200000000, "inlaws_siblings_gift": 100000000}},
-    "vat": {"default_rate": 0.10},
-    "patent_tax": {"small": 400000, "medium": 1200000, "large": 3000000, "large_over_10b": 5000000, "over_10b_threshold_khr": 10000000000},
-    "prepayment_income_tax": {"rate": 0.01},
-    "accommodation_tax": {"rate": 0.02},
-    "specific_tax": {
-        "rates": {
-            "Alcohol / spirits": 0.35,
-            "Beer": 0.30,
-            "Cigars": 0.25,
-            "Cigarettes": 0.20,
-            "Energy drinks": 0.15,
-            "Non-alcoholic beverages": 0.10,
-            "Fruit juice": 0.05,
-            "Plastic products": 0.10,
-            "Cement": 0.05,
-            "Air passenger transport": 0.10,
-            "Entertainment service": 0.10,
-            "Telecom service": 0.03
-        },
-        "domestic_goods_base_multiplier": 0.90
-    },
-    "public_lighting_tax": {"rate": 0.05},
-    "vehicle_tax": {
-        "annual_road_tax": {
-            "under_1500_new": 150000,
-            "under_1500_old": 80000,
-            "2000_2900_new": 600000,
-            "2000_2900_old": 250000,
-            "over_4000_new": 2000000,
-            "over_4000_old": 800000
-        }
-    }
-}
-
 
 def load_config() -> dict[str, Any]:
-    if CONFIG_PATH.exists():
-        try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-                return merge_dicts(DEFAULT_CONFIG, cfg)
-        except Exception:
-            return DEFAULT_CONFIG
-    return DEFAULT_CONFIG
-
-
-def merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-    out = dict(base)
-    for key, value in override.items():
-        if key in out and isinstance(out[key], dict) and isinstance(value, dict):
-            out[key] = merge_dicts(out[key], value)
-        else:
-            out[key] = value
-    return out
+    try:
+        with CONFIG_PATH.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Tax rate config file not found: {CONFIG_PATH}") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Tax rate config file is invalid JSON: {CONFIG_PATH}") from exc
 
 
 def fmt_money(value: float, currency: str = "KHR") -> str:
@@ -482,7 +411,7 @@ def compute_vehicle_import_tax(cif_value: float, import_duty_rate: float, specia
     }
 
 
-def batch_salary_payroll(rows: List[Dict[str, Any]], currency: str = "KHR", exchange_rate: float = 4000.0) -> dict[str, Any]:
+def batch_salary_payroll(rows: list[dict[str, Any]], currency: str = "KHR", exchange_rate: float = 4000.0) -> dict[str, Any]:
     employees: list[dict[str, Any]] = []
     total_salary_tax = 0.0
     total_fbt = 0.0
